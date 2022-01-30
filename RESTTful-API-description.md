@@ -90,8 +90,8 @@ This section is important because it outlines the concepts that you will later i
 
 ---
 
-:pencil2: As mentioned before, this API allows users to post food recipes and comment on other recipes. There are several categories by which recipes are divided and therefore can be reached by the users. For instance. the categories can be Vigan, high protein, low protein, meat-based, etc. Each category,  may or may not contain related recipes. For instance, there might not be any vegan recipes posted or there might be several of them.
-Anyone can read the recipes and the comments whereas to write down a comment or a recipe they need to sign in. Users that have an account can also save their favorite recipes. A user's profile consists of the history of their activity such as their posted recipes, comment, their favorite recipes,  and the post that they recently have viewed.
+:pencil2: As mentioned before, this API allows users to post food recipes and comment on other recipes. There are several categories by which recipes are divided and therefore can be reached by the users. For instance. the categories can be vegan, high protein, low protein, meat-based, etc. Each category,  may or may not contain related recipes. For instance, there might not be any vegan recipes posted or there might be several of them.
+Anyone can read the recipes and the comments whereas to write down a comment or a recipe they need to sign in. Users that have an account can also save their favorite recipes.
 
 ---
 

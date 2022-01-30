@@ -60,7 +60,8 @@ A really short version of an overview for the RESTful Web API could be:
 
 ---
 
-:pencil2: *Write your description here*
+:pencil2: Through Food Recipe Web API,  people who are enthusiastic about food can collaborate by entering food recipes. There is no threshold for visiting the recipes themselves. However, in order to enter a recipe, the user must create an account. By creating an account, users can also comment on others' recipes. 
+This API is aimed to be a part of a diet suggestion environment in which applications can retrieve recipes by defining various criteria from it. For instance, these applications could be medical-related or athletic programs.
 
 ---
 
@@ -89,7 +90,8 @@ This section is important because it outlines the concepts that you will later i
 
 ---
 
-:pencil2: *Write your text here and draw the diagram*
+:pencil2: As mentioned before, this API allows users to post food recipes and comment on other recipes. There are several categories by which recipes are divided and therefore can be reached by the users. For instance. the categories can be Vigan, high protein, low protein, meat-based, etc. Each category,  may or may not contain related recipes. For instance, there might not be any vegan recipes posted or there might be several of them.
+Anyone can read the recipes and the comments whereas to write down a comment or a recipe they need to sign in. Users that have an account can also save their favorite recipes. A user's profile consists of the history of their activity such as their posted recipes, comment, their favorite recipes,  and the post that they recently have viewed.
 
 ---
 
@@ -107,7 +109,8 @@ Describe at least two clients or services that could use your Web API. You must 
 
 ---
 
-:pencil2: *Write your text here*
+:pencil2: Since this API contains a wide variety of food recipes in different categories, applications that are related to diet can use it. For instance, an application that is used by athletes can retrieve food recipes from the API based on criteria set in the application.
+Moreover, medical applications can also use this API as a source for suggesting recipes to patients based on their needs. Another use of this API that comes to mind is if it collaborates with cooking applications.
 
 
 
@@ -129,7 +132,10 @@ The purpose of this task is to get more familiar with what an API is. This will 
 
 
 
-:pencil2: *Write your text here*
+:pencil2: The spoonacular Nutrition, Recipe, and Food API is a similar API we were able to find that is similar to our project idea. This API uses a Rest architecture. The supported request formats are 
+URI Query String and CRUD and the supported response formats are CSV, GeoJSON, JSON, and XML. It is possible to search for food recipes using natural language search queries. It is also possible to find recipes based on favorite ingredients, cost,  nutritional requirements. etc.
+Applications such as Carbmanager (a carb diet counter), iTrackBites (a diet tracker and weight loss diary), etc use this API.
+More information on this API on this page: https://spoonacular.com/food-api.
 
 ---
 

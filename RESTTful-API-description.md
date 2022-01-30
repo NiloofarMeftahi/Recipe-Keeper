@@ -61,7 +61,7 @@ A really short version of an overview for the RESTful Web API could be:
 ---
 
 :pencil2: Through Food Recipe Web API,  people who are enthusiastic about food can collaborate by entering food recipes. There is no threshold for visiting the recipes themselves. However, in order to enter a recipe, the user must create an account. By creating an account, users can also comment on others' recipes. 
-This API is aimed to be a part of a diet suggestion environment in which applications can retrieve recipes by defining various criteria from it. For instance, these applications could be medical-related or athletic programs.
+This API is aimed to be a part of a diet suggestion environment in which applications can retrieve recipes by defining various criteria. For instance, these applications could be medical-related or athletic programs.
 
 ---
 

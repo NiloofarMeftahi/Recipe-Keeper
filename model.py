@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from flask import Flask, render_template, redirect, url_for, request,Response
+from flask import Flask, render_template, redirect, url_for, request,Response,make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.engine import Engine
@@ -10,6 +10,9 @@ from werkzeug.routing import BaseConverter
 from flask_restful import Resource, Api
 from jsonschema import validate, ValidationError, draft7_format_checker
 from werkzeug.exceptions import NotFound, Conflict, BadRequest, UnsupportedMediaType
+
+#import utils
+#from constants import *
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///RecipeKeeper.db"
@@ -25,17 +28,22 @@ class Users(db.Model):
     username = db.Column(db.String(128), nullable=False, unique=True)
     password = db.Column(db.String(128), nullable=False)
 
-    recipe = db.relationship('Recipes',cascade="all, delete-orphan", backref='user',uselist=False)
-    comments = db.relationship('Comment',cascade="all, delete-orphan", backref='user',uselist=False)
+    recipe = db.relationship('Recipes',cascade="all, delete-orphan", backref='user')
+    comments = db.relationship('Comment',cascade="all, delete-orphan", backref='user')
 
     def serialize(self, short_form=False):
         #print('trying',request.json)
         print('serlize')
 
-        return {
-            "username": self.username,
-            "password": self.password,
-        }
+        data = InventoryBuilder(
+            username= self.username,
+            password= self.password,
+            #recipe = self.recipe
+        )
+        return data
+    def deserialize(self, doc):
+        self.username = doc.get('username')
+        self.password = doc.get('password')
 
     @staticmethod
     def json_schema():
@@ -53,88 +61,7 @@ class Users(db.Model):
             "type": "string"
         }
         return schema
-class UserConverter(BaseConverter):
 
-    def to_python(self, user_name):
-        db_user = Users.query.filter_by(username=user_name).first()
-
-        if db_user is None:
-            raise NotFound
-        return db_user
-
-    def to_url(self, db_user):
-        #print('I am in to_url sensor')
-        return db_user.username
-
-# get one User
-class UserItem(Resource):
-
-    def get(self, user):
-        return user.serialize()
-
-    def put(self, user):
-        if not request.json:
-            raise UnsupportedMediaType
-
-        try:
-            #print('request json :', request.json)
-            validate(request.json, Users.json_schema())
-        except ValidationError as e:
-            raise BadRequest(description=str(e))
-
-        user.deserialize(request.json)
-        try:
-            db.session.add(user)
-            db.session.commit()
-        except IntegrityError:
-            raise Conflict(
-                409,
-                description="User with name '{username}' already exists.".format(
-                    **request.json
-                )
-            )
-
-        #return Response(status=204)
-        return (render_template('login.html'),204,headers)
-
-class UsersCollection(Resource):
-
-        def get(self):
-            print('I;m get')
-            body = {"items": []}
-            for db_User in Users.query.all():
-                item = db_User.serialize(short_form=True)
-                body["items"].append(item)
-
-            return Response(json.dumps(body), 200, mimetype=JSON)
-           # return Response(render_template('login.html'))
-
-        def post(self):
-
-            if not request.json:
-                raise UnsupportedMediaType
-                return 415
-            try:
-                user = Users(
-                    username=request.json['username'],
-                    password=request.json["password"],
-                )
-                db.session.add(user)
-                db.session.commit()
-
-            except IntegrityError:
-                raise Conflict(
-                    description="User with name '{username}' already exists.".format(
-                       **request.json
-                    )
-                )
-                abort(409)
-            except KeyError:
-                abort(400)
-            return "Posted", 201
-           #headers = {'Content-Type': 'text/html'}
-
-            #return Response(render_template('login.html'), 201, headers)
 
 #################################################################
 class Recipes(db.Model):
@@ -153,7 +80,9 @@ class Recipes(db.Model):
         }
     def deserialize(self, doc,usr):
         print('Im in Measurement deserlization')
-        self.user_id = usr.id
+        fetched_user = Users.query.filter_by(username=usr).first()
+
+        self.user_id = fetched_user.id
         self.title = doc.get("title")
         self.content = doc.get('content')
 
@@ -175,59 +104,7 @@ class Recipes(db.Model):
         }
         return schema
 
-class RecipeConverter(BaseConverter):
 
-    def to_python(self, recipe_title):
-        db_recipe = Recipes.query.filter_by(title=recipe_title).first()
-
-        if db_recipe is None:
-            raise NotFound
-        return db_recipe
-
-    def to_url(self, db_recipe):
-        return db_recipe.title
-
-
-class RecipesCollection(Resource):
-
-        def get(self,user):
-            body = {"items": []}
-            for db_recipe in user.recipe:
-                item = db_recipe.serialize(short_form=True)
-                body["items"].append(item)
-
-            return Response(json.dumps(body), 200, mimetype=JSON)
-
-        # return Response(render_template('login.html'))
-
-        def post(self,user):
-
-            if not request.json:
-                raise UnsupportedMediaType
-                return 415
-            try:
-                validate(request.json, Recipes.json_schema(), format_checker=draft7_format_checker)
-            except ValidationError as e:
-                raise BadRequest(description=str(e))
-                return 400
-
-            recipe = Recipes()
-            recipe.deserialize(request.json, user)
-
-            try:
-                db.session.add(recipe)
-                db.session.commit()
-
-            except IntegrityError:
-                raise Conflict(
-                    description="recipe with name '{title}' already exists.".format(
-                        **request.json
-                    )
-                )
-                abort(409)
-            except KeyError:
-                abort(400)
-            return "Posted", 201
 
 
 #####################################################################
@@ -262,50 +139,31 @@ class Comment(db.Model):
         }
         return schema
 
-class CommentCollection(Resource):
-
-        def get(self,user,recipe):
-
-            body = {"items": []}
-            print('booooom')
-            print('r id=', recipe)
-            print('user',user)
-            for db_comment in recipe.comments:
-                print('I am in')
-
-                item = db_comment.serialize(short_form=True)
-                body["items"].append(item)
-
-            return Response(json.dumps(body), 200, mimetype=JSON)
-
-        # return Response(render_template('login.html'))
-
-        def post(self, user, recipe):
-
-            if not request.json:
-                raise UnsupportedMediaType
-                return 415
-            try:
-                validate(request.json, Comment.json_schema(), format_checker=draft7_format_checker)
-            except ValidationError as e:
-                raise BadRequest(description=str(e))
-                return 400
-
-            comment = Comment()
-            comment.deserialize(request.json, user,recipe)
-
-            try:
-                db.session.add(comment)
-                db.session.commit()
-
-            except KeyError:
-                abort(400)
-            return "Posted", 201
 
 class Categories(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), nullable=False, unique=True)
+    cat_name = db.Column(db.String(64), nullable=False, unique=True)
 
+    def serialize(self, short_form=False):
+        return {
+            "cat_name": self.cat_name,
+        }
+    def deserialize(self, doc):
+        self.cat_name = doc.get('cat_name')
+
+
+    @staticmethod
+    def json_schema():
+        schema = {
+            "type": "object",
+            "required": ["cat_name"]
+        }
+        props = schema["properties"] = {}
+        props["cat_name"] = {
+            "description": "cat_name",
+            "type": "string"
+        }
+        return schema
 class Category_Recipe(db.Model):
     Cat_id = db.Column(db.Integer, db.ForeignKey("categories.id"),primary_key=True)
     Recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id"),primary_key=True)
@@ -315,16 +173,20 @@ class Favorites(db.Model):
     recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id"),primary_key=True)
 
 
+
+
 #api.add_resource("/api/login/")
 #api.ro(render_template('login.html'), "/api/login/")
-app.url_map.converters["user"] = UserConverter
-app.url_map.converters["recipe"] = RecipeConverter
+#app.url_map.converters["user"] = UserConverter
+#app.url_map.converters["recipe"] = RecipeConverter
 
-api.add_resource(UsersCollection, "/api/user/")
+#api.add_resource(UsersCollection, "/api/user/",endpoint="users")
 #still in progress
-#api.add_resource(UserItem, "/api/user/<User>/")
-api.add_resource(RecipesCollection, "/api/users/<user:user>/recipes/")
-api.add_resource(CommentCollection, "/api/users/<user:user>/<recipe:recipe>/comment/")
+#api.add_resource(UserItem, "/api/user/<user:user>/")
+#api.add_resource(UserItem, "/api/user/<user>/",endpoint="user")
+
+#api.add_resource(RecipesCollection, "/api/users/<user:user>/recipes/")
+#api.add_resource(CommentCollection, "/api/users/<user:user>/<recipe:recipe>/comment/")
 
 
 
@@ -347,15 +209,15 @@ def createDB():
     recipe1=Recipes(title='food1',content='content1')
     recipe2=Recipes(title='food2',content='content2')
 
-    user1.recipe=recipe1
-    user2.recipe=recipe2
+    user1.recipe.append(recipe1)
+    user2.recipe.append(recipe2)
     db.session.commit()
     db.session.add(recipe1)
     db.session.add(recipe2)
     comment1=Comment(comment_body='comment1')
     comment2=Comment(comment_body='comment2')
-    user1.comments=comment1
-    user2.comments=comment2
+    user1.comments.append(comment1)
+    user2.comments.append(comment2)
 
     db.session.add(comment1)
     db.session.add(comment2)

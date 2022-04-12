@@ -1,0 +1,120 @@
+---
+openapi: 3.0.3
+servers:
+- url: /api
+components:
+  parameters:
+    recipes:
+      description: this is the recipes documentation.
+      in: path
+      name: recipes
+      required: true
+      schema:
+        type: string
+  schemas:
+    Recipes:
+      properties:
+        title:
+          description: The title of the recipe
+          type: string
+        content:
+          description: The contetns of the recipe
+          type: string  
+
+
+      required:
+      - title
+      - content
+      type: object  
+
+info:
+  title: Recipe Keeper
+  version: 0.0.1
+  description: |
+    This is an API for food recipes.
+    PWP course project.
+    University of Oulu.
+  termsOfService: http://totally.not.placehold.er/
+  contact:
+    url: http://totally.not.placehold.er/
+    email: nmeftahi21@student.oulu.fi
+    name: |
+      Niloofar Meftahi
+      Marwa Zabara
+      Maha Eldamnhory
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html  
+
+paths:
+  /recipes/:
+    get:
+      description: Get the list of Recipes
+      responses:
+        '200':
+          description: List of Recipes info
+          content:
+            application/json:
+              example:
+                - title: food1
+                  content: content1
+                - title: food2
+                  content: content2
+        
+    post:
+      description: Create a new Recipe
+      requestBody:
+        description: JSON document that contains basic data for a new recipe
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Recipes'
+
+            example:
+              title: food1
+              content: content1
+
+      responses:
+        '201':
+          description: The recipe was created successfully
+          headers:
+            Location:
+              description: URI of the new Recipe
+              schema:
+                type: string
+        '400':
+          description: The request body was not valid
+        '409':
+          description: A recipe with the same title already exists
+        '415':
+          description: Unsupported media type
+#############################################
+    put:
+      description: Replace recipe's data with new values
+      requestBody:
+        description: JSON document that contains new basic data for the recipe
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Recipes'
+            example:
+              title: new-food1
+              
+      responses:
+        '204':
+          description: The recipe's attributes were updated successfully
+        '400':
+          description: The request body was not valid
+        '404':
+          description: The recipe was not found
+        '409':
+          description: A recipe with the same title already exists
+        '415':
+          description: Unsupported media type
+    delete:
+     description: Delete the selected recipe
+     responses:
+       '204':
+         description: The recipe was successfully deleted
+       '404':
+         description: The recipe was not found

@@ -15,26 +15,26 @@ class Recipes(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(64), nullable=False)
     content = db.Column(db.String(400), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
     comment = db.relationship('Comments',  cascade="all, delete-orphan",backref='recipe',uselist=False)
 
 
 class Comments(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     comment_body = db.Column(db.String(400), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id", ondelete="SET NULL"))
 class Categories(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False, unique=True)
 
 class Category_Recipe(db.Model):
-    Cat_id = db.Column(db.Integer, db.ForeignKey("categories.id"),primary_key=True)
-    Recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id"),primary_key=True)
+    Cat_id = db.Column(db.Integer, db.ForeignKey("categories.id", ondelete="SET NULL"),primary_key=True)
+    Recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id", ondelete="SET NULL"),primary_key=True)
 
 class Favorites(db.Model):
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"),primary_key=True)
-    recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id"),primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"),primary_key=True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id", ondelete="SET NULL"),primary_key=True)
 
 
 db.create_all()

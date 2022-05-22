@@ -4,6 +4,13 @@ servers:
 - url: /api
 components:
   parameters:
+    user:
+      description: this is users documentation.
+      in: path
+      name: users
+      required: true
+      schema:
+        type: string
     comment:
       description: this is the comments documentation.
       in: path
@@ -11,7 +18,29 @@ components:
       required: true
       schema:
         type: string
+    recipe:
+      description: this is the recipes documentation.
+      in: path
+      name: recipe
+      required: true
+      schema:
+        type: string    
   schemas:
+    user:
+      properties:
+        username:
+          description: User's username
+          type: string
+        password:
+          description: User's password
+          type: string  
+    
+
+      required:
+      - username
+      - password
+      type: object  
+    
     Comment:
       properties:
         comment_body :
@@ -21,7 +50,23 @@ components:
 
       required:
       - comment_body 
-      type: object  
+      type: object 
+    
+    Recipe:
+      properties:
+        recipe_title:
+          description: The recipe's title
+          type: string
+        recipe_body :
+          description: The recipe's body
+          type: string
+
+
+      required:
+      - recipe_body 
+      type: object   
+    
+
 
 info:
   title: Recipe Keeper
@@ -41,6 +86,7 @@ info:
   license:
     name: Apache 2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html  
+
 paths:
   /users/:
     get:
@@ -63,7 +109,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Users'
+              $ref: '#/components/schemas/user'
 
             example:
               username: testusername1
@@ -83,7 +129,9 @@ paths:
           description: A User with the same username already exists
         '415':
           description: Unsupported media type
-  /userItem/:
+  /user/<user>/:
+    parameters:
+    - $ref: '#/components/parameters/user'
     put:
       description: Replace Users's data with new values
       requestBody:
@@ -91,7 +139,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Users'
+              $ref: '#/components/schemas/user'
             example:
               username: new-testusername1
               
@@ -114,7 +162,9 @@ paths:
        '404':
          description: The user was not found
 ############################################################
-  /comment/:
+  /user/<user>/<recipe>/comment/:
+    parameters:
+    - $ref: '#/components/parameters/comment'
     get:
       description: Get the list of Comments
       responses:
@@ -135,7 +185,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Comment'
+              $ref: '#/components/schemas/user'
 
             example:
               comment_body : comment1
@@ -153,7 +203,9 @@ paths:
         '415':
           description: Unsupported media type
 #############################################
-  /commentItem/:
+  /user/<recipe>/comment/:
+    parameters:
+    - $ref: '#/components/parameters/comment'
     put:
       description: Replace comment's data with new values
       requestBody:
@@ -161,7 +213,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Comment'
+              $ref: '#/components/schemas/user'
             example:
               title: new-food1
               
@@ -182,7 +234,9 @@ paths:
        '404':
          description: The comment was not found
 #################################################################
-  /recipes/:
+  /<user>/recipes/:
+    parameters:
+    - $ref: '#/components/parameters/recipe'
     get:
       description: Get the list of Recipes
       responses:
@@ -203,7 +257,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Recipes'
+              $ref: '#/components/schemas/user'
 
             example:
               title: food1
@@ -224,7 +278,9 @@ paths:
         '415':
           description: Unsupported media type
 #############################################
-  /recipeItem/:
+  /recipes/<recipe>/:
+    parameters:
+    - $ref: '#/components/parameters/recipe'
     put:
       description: Replace recipe's data with new values
       requestBody:
@@ -232,7 +288,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Recipes'
+              $ref: '#/components/schemas/user'
             example:
               title: new-food1
               

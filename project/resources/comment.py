@@ -1,342 +1,163 @@
----
-openapi: 3.0.3
-servers:
-- url: /api
-components:
-  parameters:
-    user:
-      description: this is users documentation.
-      in: path
-      name: users
-      required: true
-      schema:
-        type: string
-    comment:
-      description: this is the comments documentation.
-      in: path
-      name: comment
-      required: true
-      schema:
-        type: string
-    recipe:
-      description: this is the recipes documentation.
-      in: path
-      name: recipe
-      required: true
-      schema:
-        type: string    
-  schemas:
-    User:
-      properties:
-        username:
-          description: User's username
-          type: string
-        password:
-          description: User's password
-          type: string  
-    
+import json
+from jsonschema import validate, ValidationError, draft7_format_checker
+from flask import Response, request, url_for
+from flask_restful import Resource
+from sqlalchemy.exc import IntegrityError
+from model import Comment,Recipes,Users, api , db
+import resources.user
+import resources.recipe
 
-      required:
-      - username
-      - password
-      type: object  
-    
-    Comment:
-      properties:
-        comment_body :
-          description: The comment's body
-          type: string
+import utils
+from constants import *
+
+JSON = "application/json"
 
 
-      required:
-      - comment_body 
-      type: object 
-    
-    Recipe:
-      properties:
-        recipe_title:
-          description: The recipe's title
-          type: string
-        recipe_body :
-          description: The recipe's body
-          type: string
+class CommentItem(Resource):
+     
+    def delete(self, user, recipe):
+        fetched_user = Users.query.filter_by(username=user).first()
+        db_recipe = Recipes.query.join(Users).filter(
+            Users.username == user, Recipes.title == recipe
+        ).first()
+
+        if not fetched_user:
+            return utils.create_error_response(404, "User not found")
+
+        if not db_recipe:
+            return utils.create_error_response(404, "Recipe not found")
+        try:
+            db.session.delete(db_recipe)
+            db.session.commit()
+        except:
+            return utils.create_error_response(500, "Database error")
+
+        return Response(status=204, mimetype=MASON)
+
+    def put(self, user, recipe):
+        fetched_user = Users.query.filter_by(username=user).first()
+        db_recipe = Recipes.query.join(Users).filter(
+            Users.username == user, Recipes.title == recipe
+        ).first()
+        if not fetched_user:
+            return utils.create_error_response(404, "User not found")
+
+        if not db_recipe:
+            return utils.create_error_response(404, "Recipe not found")
+
+        if not request.json :
+            return utils.create_error_response(415, "Unsupported media type", "Use JSON")
+
+        try:
+            validate(
+                request.json,
+                db_recipe.json_schema(),
+                format_checker=draft7_format_checker,
+            )
+        except ValidationError as e:
+            return utils.create_error_response(400, "Invalid JSON document", str(e))
+
+        if db_recipe.title != request.json["title"]:
+            n = Recipes.query.filter(
+                Recipes.title.ilike(request.json["title"].lower())
+            ).count() - 1
+            if n:
+                name = db_recipe.title.lower() + "_f" + str(n)
+            else:
+                name = db_recipe.title.lower()
+            db_recipe.title = name
+
+        db_recipe.title = request.json["title"]
+        db_recipe.content = request.json["content"]
+
+        try:
+            db.session.commit()
+        except:
+            return utils.create_error_response(500, "Database error")
+
+        return Response(status=204)
 
 
-      required:
-      - recipe_body 
-      type: object   
-    
+class CommentsCollection(Resource):
+
+    def get(self, recipe,user=None):
+
+        body = utils.RecipeBuilder(
+            items=[]
+        )
+        db_user = Users.query.filter_by(username=user).first()
+        db_recipe = Recipes.query.filter_by(title=recipe).first()
+        if db_recipe is None:
+            return utils.create_error_response(404, "Recipe not found")
+        db_comments = Comment.query.filter_by(recipe_id=db_recipe.id)
+
+        if user is None:
+            base_uri = url_for("recipe_comments",recipe=recipe)
+
+        else:
+            #db_comments = Comment.query.filter_by(recipe_id=db_recipe.id, user_id=db_user.id)
+            base_uri = url_for("user_comment",recipe=recipe,user=db_user)
 
 
-info:
-  title: Recipe Keeper
-  version: 0.0.1
-  description: |
-    This is an API for food recipes.
-    PWP course project.
-    University of Oulu.
-  termsOfService: http://totally.not.placehold.er/
-  contact:
-    url: http://totally.not.placehold.er/
-    email: nmeftahi21@student.oulu.fi
-    name: |
-      Niloofar Meftahi
-      Marwa Zabara
-      Maha Eldamnhory
-  license:
-    name: Apache 2.0
-    url: https://www.apache.org/licenses/LICENSE-2.0.html  
+        body.add_namespace("recipe", LINK_RELATIONS_URL)
+        #base_uri = url_for("user_comment", user=user , recipe=recipe)
+        body.add_control("self", href=request.path)
+        body.add_control_add_comments(user=db_user,recipe= db_recipe)
+        body.add_control_get_comments(user=db_user,recipe=db_recipe)
 
-paths:
-  /users/:
-    get:
-      description: Get the list of Users
-      responses:
-        '200':
-          description: List of Users info
-          content:
-            application/json:
-              example:
-                - username: testusername1
-                  password: testpass1
-                - username: testusername2
-                  password: testpass2
-        
-    post:
-      description: Create a new User
-      requestBody:
-        description: JSON document that contains basic data for a new User
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/User'
+        #Recipes.query.join(Users).filter(
+        #    Users.username == user, Recipes.title == recipe
+        #).first()
 
-            example:
-              username: testusername1
-              password: testpass1
+        for comnt in db_comments:
+            item = utils.RecipeBuilder(
+                comment_body=comnt.comment_body,
+            )
+            body["items"].append(item)
+        # body.add_control_get_comments(user=user, recipe=recipe)
 
-      responses:
-        '201':
-          description: The User was created successfully
-          headers:
-            Location:
-              description: URI of the new User
-              schema:
-                type: string
-        '400':
-          description: The request body was not valid
-        '409':
-          description: A User with the same username already exists
-        '415':
-          description: Unsupported media type
-  /user/<user>/:
-    parameters:
-    - $ref: '#/components/parameters/user'
-    get:
-      description: Get one user
-      responses:
-        '200':
-          description: User info
-          content:
-            application/json:
-              example:
-                - username: testusername1
-                  password: testpass1
+        return Response(json.dumps(body), 200, mimetype=MASON)
 
-        '404':
-          description: Not found
-                  
-                
-    put:
-      description: Replace Users's data with new values
-      requestBody:
-        description: JSON document that contains new basic data for the user
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/User'
-            example:
-              username: new-testusername1
-              
-      responses:
-        '204':
-          description: The user's attributes were updated successfully
-        '400':
-          description: The request body was not valid
-        '404':
-          description: The user was not found
-        '409':
-          description: A user with the same username already exists
-        '415':
-          description: Unsupported media type
-    delete:
-     description: Delete the selected user
-     responses:
-       '204':
-         description: The user was successfully deleted
-       '404':
-         description: The user was not found
-############################################################
-  /user/<user>/<recipe>/comment/:
-    parameters:
-    - $ref: '#/components/parameters/comment'
-    get:
-      description: Get the list of Comments
-      responses:
-        '200':
-          description: List of Comments info
-          content:
-            application/json:
-              example:
-                - comment_body : comment1
+    def post(self, recipe,user=None):
 
-                - comment_body : comment2
-            
-        
-    post:
-      description: Create a new Comment
-      requestBody:
-        description: JSON document that contains basic data for a new comment
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Comment'
+        if not request.json:
+            return utils.create_error_response(415, "Unsupported media type", "Use JSON")
 
-            example:
-              comment_body : comment1
+        try:
+            validate(
+                request.json,
+                Comment.json_schema(),
+                format_checker=draft7_format_checker,
+            )
+        except ValidationError as e:
+            return utils.create_error_response(400, "Invalid JSON document", str(e))
 
-      responses:
-        '201':
-          description: The comment was created successfully
-          headers:
-            Location:
-              description: URI of the new Comment
-              schema:
-                type: string
-        '400':
-          description: The request body was not valid
-        '415':
-          description: Unsupported media type
-#############################################
-  /user/<recipe>/comment/:
-    parameters:
-    - $ref: '#/components/parameters/comment'
-  
-    put:
-      description: Replace comment's data with new values
-      requestBody:
-        description: JSON document that contains new basic data for the commment
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Comment'
-            example:
-              title: new-food1
-              
-      responses:
-        '204':
-          description: The comment's attributes were updated successfully
-        '400':
-          description: The request body was not valid
-        '404':
-          description: The comment was not found #????????
-        '415':
-          description: Unsupported media type
-    delete:
-     description: Delete the selected comment
-     responses:
-       '204':
-         description: The comment was successfully deleted
-       '404':
-         description: The comment was not found
-#################################################################
-  /<user>/recipes/:
-    parameters:
-    - $ref: '#/components/parameters/recipe'
-    get:
-      description: Get the list of Recipes
-      responses:
-        '200':
-          description: List of Recipes info
-          content:
-            application/json:
-              example:
-                - title: food1
-                  content: content1
-                - title: food2
-                  content: content2
-        
-    post:
-      description: Create a new Recipe
-      requestBody:
-        description: JSON document that contains basic data for a new recipe
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Recipe'
 
-            example:
-              title: food1
-              content: content1
+        db_recipe = Recipes.query.filter_by(title=recipe).first()
+        if not db_recipe:
+            return utils.create_error_response(404, "Recipe not found")
 
-      responses:
-        '201':
-          description: The recipe was created successfully
-          headers:
-            Location:
-              description: URI of the new Recipe
-              schema:
-                type: string
-        '400':
-          description: The request body was not valid
-        '409':
-          description: A recipe with the same title already exists
-        '415':
-          description: Unsupported media type
-#############################################
-  /recipes/<recipe>/:
-    parameters:
-    - $ref: '#/components/parameters/recipe'
-    get:
-      description: Get one recipe
-      responses:
-        '200':
-          description: recipe info
-          content:
-            application/json:
-              example:
-                - title : title1
-                  content : content1
+        if user is not None:
+            db_user = Users.query.filter_by(username=user).first()
+        else:
+            return utils.create_error_response(404, "User is Needed to post a comment")
 
-        '404':
-          description: Not found      
-    
-    put:
-      description: Replace recipe's data with new values
-      requestBody:
-        description: JSON document that contains new basic data for the recipe
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Recipe'
-            example:
-              title: new-food1
-              
-      responses:
-        '204':
-          description: The recipe's attributes were updated successfully
-        '400':
-          description: The request body was not valid
-        '404':
-          description: The recipe was not found
-        '409':
-          description: A recipe with the same title already exists
-        '415':
-          description: Unsupported media type
-    delete:
-     description: Delete the selected recipe
-     responses:
-       '204':
-         description: The recipe was successfully deleted
-       '404':
-         description: The recipe was not found
+
+        comnt = Comment(
+            #user_id=db_user.id,
+            comment_body=request.json["comment_body"],
+            #recipe_id=db_recipe.id,
+        )
+        db_user.comments.append(comnt)
+        db_recipe.comments.append(comnt)
+
+        try:
+            db.session.add(comnt)
+            db.session.commit()
+        except:
+            return utils.create_error_response(500, "Database error")
+
+        return Response(
+            status=201,
+            headers={"Location": api.url_for(resources.user.UserItem, user=user)}
+        )

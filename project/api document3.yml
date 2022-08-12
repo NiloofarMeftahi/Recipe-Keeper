@@ -132,6 +132,21 @@ paths:
   /user/<user>/:
     parameters:
     - $ref: '#/components/parameters/user'
+    get:
+      description: Get one user
+      responses:
+        '200':
+          description: User info
+          content:
+            application/json:
+              example:
+                - username: testusername1
+                  password: testpass1
+
+        '404':
+          description: Not found
+                  
+                
     put:
       description: Replace Users's data with new values
       requestBody:
@@ -206,6 +221,7 @@ paths:
   /user/<recipe>/comment/:
     parameters:
     - $ref: '#/components/parameters/comment'
+  
     put:
       description: Replace comment's data with new values
       requestBody:
@@ -281,6 +297,20 @@ paths:
   /recipes/<recipe>/:
     parameters:
     - $ref: '#/components/parameters/recipe'
+    get:
+      description: Get one recipe
+      responses:
+        '200':
+          description: recipe info
+          content:
+            application/json:
+              example:
+                - title : title1
+                  content : content1
+
+        '404':
+          description: Not found      
+    
     put:
       description: Replace recipe's data with new values
       requestBody:

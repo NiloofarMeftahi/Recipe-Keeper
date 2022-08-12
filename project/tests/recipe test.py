@@ -66,7 +66,7 @@ def _get_recipe_json(number=1):
     
     return {"title": "extra-title-{}".format(number), "conctent": "extracontent"}
     ##############################################################
-class TestUsersCollection(object): # recipe collection get method test
+class TestRecipeCollection(object): # recipe collection get method test
     RESOURCE_URL = "/api/recipes/"
     def test_get(self, client):
         resp = client.get(self.RESOURCE_URL)
@@ -109,7 +109,7 @@ class TestUsersCollection(object): # recipe collection get method test
         resp = client.post(self.RESOURCE_URL, json=valid)
         assert resp.status_code == 400
 ############################################################
-class TestUserItem(object):
+class TestRecipeItem(object):
     
     RESOURCE_URL = "/api/recipe/testrecipe1/"
     INVALID_URL = "/api/recipe/nonrecipex/"
